@@ -533,6 +533,7 @@
     <a href="#delete-device"     class="sidebar-link"><span class="method-dot dot-delete"></span>Delete Device</a>
     <a href="#send-command"      class="sidebar-link"><span class="method-dot dot-post"></span>Send Command</a>
     <a href="#trigger-device"    class="sidebar-link"><span class="method-dot dot-post"></span>Trigger Device</a>
+    <a href="#fetch-devices"     class="sidebar-link"><span class="method-dot dot-post"></span>Fetch Devices (cmd)</a>
   </div>
 
   <div class="sidebar-section">
@@ -553,6 +554,11 @@
     <a href="#ws-app"        class="sidebar-link"><span class="method-dot dot-ws"></span>App Client Flow</a>
     <a href="#ws-device"     class="sidebar-link"><span class="method-dot dot-ws"></span>Device Flow</a>
     <a href="#ws-hub"        class="sidebar-link"><span class="method-dot dot-ws"></span>Hub Flow</a>
+    <a href="#ws-add-flow"   class="sidebar-link"><span class="method-dot dot-ws"></span>Add Device Flow</a>
+    <a href="#ws-add-device" class="sidebar-link"><span class="method-dot dot-ws"></span>Register Node (addD)</a>
+    <a href="#ws-add-hub"    class="sidebar-link"><span class="method-dot dot-ws"></span>Register Hub (addH)</a>
+    <a href="#ws-hub-nodes"  class="sidebar-link"><span class="method-dot dot-ws"></span>Hub Add Nodes (AdHN)</a>
+    <a href="#ws-ping"       class="sidebar-link"><span class="method-dot dot-ws"></span>Ping Architecture</a>
     <a href="#ws-commands"   class="sidebar-link"><span class="method-dot dot-ws"></span>Commands Reference</a>
   </div>
 </nav>
@@ -775,8 +781,9 @@
           <tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr>
           <tr><td class="param-name">email</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc"></td></tr>
           <tr><td class="param-name">password</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc"></td></tr>
+          <tr><td class="param-name">RequestAddDevice</td><td class="param-type">boolean</td><td class="param-opt">optional</td><td class="param-desc">Pass <code>true</code> when the user wants to pair a new device/hub. The server will generate a one-time 20-character <code>addDeviceToken</code> and include it in the response. Relay this token to the ESP/hub firmware so it can self-register via WebSocket.</td></tr>
         </table>
-        <div class="body-label">Response — 200 OK</div>
+        <div class="body-label">Response — 200 OK (standard)</div>
         <div class="code-wrap">
           <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           <pre>{
@@ -797,6 +804,22 @@
     }
   }
 }</pre>
+        </div>
+        <div class="body-label">Response — 200 OK (with RequestAddDevice: true)</div>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>{
+  <span class="json-key">"success"</span>: <span class="json-bool">true</span>,
+  <span class="json-key">"data"</span>: {
+    <span class="json-key">"user"</span>: { <span class="json-comment">/* ...same user object... */</span> },
+    <span class="json-key">"tokens"</span>: { <span class="json-comment">/* ...same tokens... */</span> },
+    <span class="json-key">"addDeviceToken"</span>: <span class="json-str">"K9fX2m7PqW4vB1zL8tNx"</span>  <span class="json-comment">// 20-char one-time token — relay to device/hub firmware</span>
+  }
+}</pre>
+        </div>
+        <div class="callout callout-info" style="margin-top:12px">
+          <div class="callout-icon">i</div>
+          <div>The <code>addDeviceToken</code> is the entry point for the <strong>Add Device Flow</strong>. See the <a href="#ws-add-flow" style="color:var(--accent)">Add Device Flow</a> section for the full end-to-end walkthrough.</div>
         </div>
       </div>
     </div>
@@ -1263,6 +1286,63 @@
     <span class="json-key">"Trigs"</span>: <span class="json-str">"motion:on"</span>
   }
 ]</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- FETCH DEVICES (cmd) -->
+    <div class="endpoint" id="fetch-devices">
+      <div class="endpoint-header" onclick="toggle(this)">
+        <span class="method-badge badge-post">POST</span>
+        <span class="endpoint-path">/api/v1/devices/fetch</span>
+        <span class="endpoint-desc">Fetch device list via cmd token (app clients)</span>
+        <span class="chevron">▶</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="body-note" style="margin-top:12px">Used by app clients that pass the login token in the body instead of the <code>Authorization</code> header. No Bearer token needed — authentication is done via <code>logintoken</code> in the body.</div>
+        <div class="callout callout-info" style="margin-top:10px">
+          <div class="callout-icon">i</div>
+          <div>This is the recommended fetch method for IoT client apps. The <code>logintoken</code> is the <code>accessToken</code> you got from <code>/auth/login</code>.</div>
+        </div>
+        <div class="body-label">Request Body</div>
+        <table class="params-table">
+          <tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr>
+          <tr><td class="param-name">cmd</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">Must be exactly <code>"getDs"</code></td></tr>
+          <tr><td class="param-name">logintoken</td><td class="param-type">string</td><td class="param-req">required</td><td class="param-desc">The <code>accessToken</code> from login</td></tr>
+        </table>
+        <div class="body-label">Example Request</div>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>{
+  <span class="json-key">"cmd"</span>: <span class="json-str">"getDs"</span>,
+  <span class="json-key">"logintoken"</span>: <span class="json-str">"eyJhbGciOiJIUzI1NiJ9..."</span>
+}</pre>
+        </div>
+        <div class="body-label">Response — 200 OK (raw array)</div>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>[
+  {
+    <span class="json-key">"id"</span>: <span class="json-str">"1"</span>,
+    <span class="json-key">"Local_ID"</span>: <span class="json-str">"0:q3"</span>,
+    <span class="json-key">"name"</span>: <span class="json-str">"Living Room Light"</span>,
+    <span class="json-key">"type"</span>: <span class="json-str">"bulb"</span>,
+    <span class="json-key">"Last_state"</span>: <span class="json-str">"on"</span>,
+    <span class="json-key">"Trigs"</span>: <span class="json-str">"a_b-dim_bright"</span>
+  },
+  {
+    <span class="json-key">"id"</span>: <span class="json-str">"2"</span>,
+    <span class="json-key">"Local_ID"</span>: <span class="json-str">"7:b3"</span>,
+    <span class="json-key">"name"</span>: <span class="json-str">"Living Room Switch"</span>,
+    <span class="json-key">"type"</span>: <span class="json-str">"switch"</span>,
+    <span class="json-key">"Last_state"</span>: <span class="json-str">"on"</span>,
+    <span class="json-key">"Trigs"</span>: <span class="json-str">"a_b-off_on"</span>
+  }
+]</pre>
+        </div>
+        <div class="callout callout-warn" style="margin-top:10px">
+          <div class="callout-icon">!</div>
+          <div>Returns a <strong>raw array</strong> — no standard <code>{ success, data }</code> wrapper. Parse the response directly as a JSON array.</div>
         </div>
       </div>
     </div>
@@ -1740,6 +1820,222 @@ r_nd|DEV-a1b2c3|a1b2c3d4e5|toggle|success|on</pre>
     <div class="body-note">Hubs don't handle <code>c_nd</code> / <code>r_nd</code> directly right now — that's device-level. The hub mainly signals presence (online/offline). Device commands still go device-to-device.</div>
   </div>
 
+  <!-- ADD DEVICE FLOW -->
+  <div class="section" id="ws-add-flow">
+    <div class="section-title">Add Device Flow (End-to-End)</div>
+    <div class="section-desc">How a user pairs a new node or hub with their account. Combines an HTTP login call with a WebSocket self-registration message from the firmware.</div>
+
+    <div class="ws-flow">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-content">
+          <div class="flow-label arrow-to-server">▲ App → Server — Login with RequestAddDevice flag</div>
+          <div class="flow-msg">POST /api/v1/auth/login  →  { email, password, RequestAddDevice: true }</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-content">
+          <div class="flow-label arrow-from-server">▼ Server → App — Returns standard login data + addDeviceToken</div>
+          <div class="flow-msg">{ ...user, ...tokens, addDeviceToken: "K9fX2m7PqW4vB1zL8tNx" }</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-content">
+          <div class="flow-label">App relays the 20-char token to the ESP/hub firmware (e.g. via BLE, local Wi-Fi, or serial)</div>
+          <div class="flow-msg">addDeviceToken = "K9fX2m7PqW4vB1zL8tNx"  →  (sent to device over local channel)</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-content">
+          <div class="flow-label arrow-to-server">▲ Device/Hub → Server — Opens WebSocket and sends addD or addH</div>
+          <div class="flow-msg">addD|&lt;Local_ID&gt;|&lt;Name&gt;|&lt;Type&gt;|&lt;trigs&gt;|&lt;Model&gt;|&lt;addDeviceToken&gt;</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <div class="flow-content">
+          <div class="flow-label arrow-from-server">▼ Server → Device/Hub — Confirmed, device is now registered</div>
+          <div class="flow-msg">AdD_resp|&lt;Local_ID&gt;|suc|&lt;cloud_user_id&gt;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-warn" style="margin-top:14px">
+      <div class="callout-icon">!</div>
+      <div>If the device/hub does not receive <code>AdD_resp</code> it will keep retrying for up to <strong>24 hours</strong>. Retry interval depends on the subscription plan (30 seconds → 10 minutes).</div>
+    </div>
+  </div>
+
+  <!-- WS REGISTER NODE (addD) -->
+  <div class="section" id="ws-add-device">
+    <div class="section-title">Register Node via WebSocket (addD)</div>
+    <div class="section-desc">A node/sensor self-registers by sending <code>addD</code> over the cloud WebSocket. The server validates the <code>addDeviceToken</code>, creates the DB record, and responds with the user's cloud ID.</div>
+
+    <div class="body-label">Message format (Device → Server)</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>addD|&lt;Local_ID&gt;|&lt;Name&gt;|&lt;Type&gt;|&lt;trigs&gt;|&lt;Model&gt;|&lt;addDeviceToken&gt;</pre>
+    </div>
+
+    <div class="body-label" style="margin-top:16px">Fields</div>
+    <table class="params-table">
+      <tr><th>Field</th><th>Example</th><th>Notes</th></tr>
+      <tr><td class="param-name">Local_ID</td><td class="param-type">0:Usp23</td><td class="param-desc">Device's local identifier assigned by the hub or firmware</td></tr>
+      <tr><td class="param-name">Name</td><td class="param-type">Room Table</td><td class="param-desc">Human-readable device name</td></tr>
+      <tr><td class="param-name">Type</td><td class="param-type">light</td><td class="param-desc">Device category (e.g. <code>light</code>, <code>switch</code>, <code>sensor</code>)</td></tr>
+      <tr><td class="param-name">trigs</td><td class="param-type">On_Off</td><td class="param-desc">Trigger / capability string</td></tr>
+      <tr><td class="param-name">Model</td><td class="param-type">BW-sdb0001</td><td class="param-desc">Hardware model identifier</td></tr>
+      <tr><td class="param-name">addDeviceToken</td><td class="param-type">K9fX2m7PqW4vB1zL8tNx</td><td class="param-desc">20-char token from <code>/auth/login</code> — links device to the user account</td></tr>
+    </table>
+
+    <div class="body-label" style="margin-top:16px">Full Example</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><span class="json-comment">// Device sends</span>
+addD|0:Usp23|Room Table|light|On_Off|BW-sdb0001|K9fX2m7PqW4vB1zL8tNx
+
+<span class="json-comment">// Server responds</span>
+AdD_resp|0:Usp23|suc|22</pre>
+    </div>
+
+    <div class="body-label" style="margin-top:16px">Server response format</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>AdD_resp|&lt;Local_ID&gt;|suc|&lt;cloud_user_id&gt;</pre>
+    </div>
+
+    <div class="callout callout-info" style="margin-top:12px">
+      <div class="callout-icon">i</div>
+      <div>The cloud assigns this WebSocket client an internal ID so it can receive commands later. The device does <strong>not</strong> receive its DB ID in the response — that's intentional.</div>
+    </div>
+  </div>
+
+  <!-- WS REGISTER HUB (addH) -->
+  <div class="section" id="ws-add-hub">
+    <div class="section-title">Register Hub via WebSocket (addH)</div>
+    <div class="section-desc">Hubs self-register with <code>addH</code>. Same token flow as nodes but with extra hub-specific fields.</div>
+
+    <div class="body-label">Message format (Hub → Server)</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>addH|&lt;hubID&gt;|&lt;HubName&gt;|&lt;type&gt;|&lt;model&gt;|&lt;local_username&gt;|&lt;guest_pin&gt;|&lt;addDeviceToken&gt;</pre>
+    </div>
+
+    <div class="body-label" style="margin-top:16px">Fields</div>
+    <table class="params-table">
+      <tr><th>Field</th><th>Example</th><th>Notes</th></tr>
+      <tr><td class="param-name">hubID</td><td class="param-type">H123</td><td class="param-desc">Hub's local identifier</td></tr>
+      <tr><td class="param-name">HubName</td><td class="param-type">Pod proto</td><td class="param-desc">Human-readable hub name</td></tr>
+      <tr><td class="param-name">type</td><td class="param-type">hub_mini</td><td class="param-desc">Hub category / model type</td></tr>
+      <tr><td class="param-name">model</td><td class="param-type">hub001</td><td class="param-desc">Hardware model identifier</td></tr>
+      <tr><td class="param-name">local_username</td><td class="param-type">local_admin</td><td class="param-desc">Admin username for local hub access</td></tr>
+      <tr><td class="param-name">guest_pin</td><td class="param-type">123456</td><td class="param-desc">PIN for guest access on the local network</td></tr>
+      <tr><td class="param-name">addDeviceToken</td><td class="param-type">A7mQ3vR9xK2wB5zL1pXt</td><td class="param-desc">20-char token from <code>/auth/login</code></td></tr>
+    </table>
+
+    <div class="body-label" style="margin-top:16px">Full Example</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><span class="json-comment">// Hub sends</span>
+addH|H123|Pod proto|hub_mini|hub001|local_admin|123456|A7mQ3vR9xK2wB5zL1pXt
+
+<span class="json-comment">// Server responds</span>
+AdD_resp|H123|suc|5</pre>
+    </div>
+
+    <div class="body-label" style="margin-top:16px">Server response format</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>AdD_resp|&lt;hubID&gt;|suc|&lt;cloud_user_id&gt;</pre>
+    </div>
+  </div>
+
+  <!-- WS HUB ADD NODES (AdHN) -->
+  <div class="section" id="ws-hub-nodes">
+    <div class="section-title">Hub Add Nodes (AdHN)</div>
+    <div class="section-desc">After a hub is registered, it reports the nodes connected to it by embedding <code>AdHN</code> in a <code>ping</code> message. The cloud saves each node and responds per-node.</div>
+
+    <div class="body-label">Message format (Hub → Server)</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>ping|&lt;hubID&gt;|&lt;userID&gt;|AdHN|&lt;device_ID&gt;,&lt;device_name&gt;,&lt;deviceType&gt;,&lt;triggers&gt;;</pre>
+    </div>
+
+    <div class="body-label" style="margin-top:16px">Fields</div>
+    <table class="params-table">
+      <tr><th>Field</th><th>Example</th><th>Notes</th></tr>
+      <tr><td class="param-name">hubID</td><td class="param-type">H#01</td><td class="param-desc">Hub's local identifier</td></tr>
+      <tr><td class="param-name">userID</td><td class="param-type">5</td><td class="param-desc">Cloud user ID (DB integer)</td></tr>
+      <tr><td class="param-name">device_ID</td><td class="param-type">1:s7hp</td><td class="param-desc">Node's local ID</td></tr>
+      <tr><td class="param-name">device_name</td><td class="param-type">Guest 1 meter</td><td class="param-desc">Human-readable name</td></tr>
+      <tr><td class="param-name">deviceType</td><td class="param-type">switch</td><td class="param-desc">Node type</td></tr>
+      <tr><td class="param-name">triggers</td><td class="param-type">On_Off</td><td class="param-desc">Trigger / capability string. Terminate each node entry with <code>;</code></td></tr>
+    </table>
+
+    <div class="body-label" style="margin-top:16px">Full Example</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre><span class="json-comment">// Hub sends (one node)</span>
+ping|H#01|5|AdHN|1:s7hp,Guest 1 meter,switch,On_Off;
+
+<span class="json-comment">// Server responds</span>
+AdHN_resp|H#01|suc|1:s7hp</pre>
+    </div>
+
+    <div class="body-label" style="margin-top:16px">Server response format</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>AdHN_resp|&lt;hubID&gt;|suc|&lt;device_ID&gt;</pre>
+    </div>
+
+    <div class="callout callout-info" style="margin-top:12px">
+      <div class="callout-icon">i</div>
+      <div>Multiple nodes can be sent in one ping by appending more <code>device_ID,name,type,trigs;</code> entries separated by semicolons. The server responds once per batch with the last processed device ID.</div>
+    </div>
+  </div>
+
+  <!-- WS PING ARCHITECTURE -->
+  <div class="section" id="ws-ping">
+    <div class="section-title">Ping Architecture</div>
+    <div class="section-desc">Hubs and devices send periodic pings to keep the cloud connection alive and deliver queued data. The ping interval depends on the user's subscription plan.</div>
+
+    <div class="body-label">Standard ping (keep-alive only)</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>ping|&lt;hubID&gt;|&lt;userID&gt;|-</pre>
+    </div>
+
+    <div class="body-label" style="margin-top:16px">Ping with embedded command (data waiting)</div>
+    <div class="code-wrap">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>ping|&lt;hubID&gt;|&lt;userID&gt;|&lt;command&gt;|&lt;data&gt;</pre>
+    </div>
+
+    <div class="body-note" style="margin-top:10px">The <code>-</code> placeholder is replaced with an actual command when there is data waiting to be sent. The cloud always checks whether <code>-</code> has been replaced with a command and processes it accordingly.</div>
+
+    <div class="body-label" style="margin-top:16px">Known embedded commands</div>
+    <table class="params-table">
+      <tr><th>Command</th><th>Full format</th><th>Description</th></tr>
+      <tr><td class="param-name">-</td><td class="param-type">ping|&lt;hubID&gt;|&lt;userID&gt;|-</td><td class="param-desc">Keep-alive only, no data payload</td></tr>
+      <tr><td class="param-name">AdHN</td><td class="param-type">ping|&lt;hubID&gt;|&lt;userID&gt;|AdHN|&lt;device_data&gt;</td><td class="param-desc">Hub reports newly added node(s)</td></tr>
+    </table>
+
+    <div class="body-label" style="margin-top:16px">Ping intervals by plan</div>
+    <table class="params-table">
+      <tr><th>Plan</th><th>Interval</th></tr>
+      <tr><td class="param-name">Basic</td><td class="param-desc">Up to 10 minutes</td></tr>
+      <tr><td class="param-name">Stellar / Premium / Prime</td><td class="param-desc">As low as 30 seconds</td></tr>
+    </table>
+
+    <div class="callout callout-warn" style="margin-top:14px">
+      <div class="callout-icon">!</div>
+      <div>The default ping format <code>ping|&lt;hubID&gt;|-</code> (without userID) is also valid as a minimal heartbeat when no user-scoped command is attached.</div>
+    </div>
+  </div>
+
   <!-- WS COMMANDS REF -->
   <div class="section" id="ws-commands">
     <div class="section-title">WebSocket Commands Reference</div>
@@ -1789,9 +2085,21 @@ r_nd|DEV-a1b2c3|a1b2c3d4e5|toggle|success|on</pre>
       </tr>
       <tr>
         <td class="param-name">ping</td>
-        <td>Device</td>
-        <td class="param-type">ping</td>
-        <td class="param-desc">Heartbeat — updates last_seen. Send every 30s.</td>
+        <td>Device / Hub</td>
+        <td class="param-type">ping|&lt;hubID&gt;|&lt;userID&gt;|-</td>
+        <td class="param-desc">Heartbeat — updates last_seen. Replace <code>-</code> with a command when data is attached (e.g. <code>AdHN</code>). Interval depends on subscription plan (30s – 10min).</td>
+      </tr>
+      <tr>
+        <td class="param-name">addD</td>
+        <td>Node</td>
+        <td class="param-type">addD|&lt;Local_ID&gt;|&lt;Name&gt;|&lt;Type&gt;|&lt;trigs&gt;|&lt;Model&gt;|&lt;token&gt;</td>
+        <td class="param-desc">Node self-registers with the cloud using the add-device token from login</td>
+      </tr>
+      <tr>
+        <td class="param-name">addH</td>
+        <td>Hub</td>
+        <td class="param-type">addH|&lt;hubID&gt;|&lt;HubName&gt;|&lt;type&gt;|&lt;model&gt;|&lt;local_user&gt;|&lt;pin&gt;|&lt;token&gt;</td>
+        <td class="param-desc">Hub self-registers with the cloud using the add-device token from login</td>
       </tr>
     </table>
 
@@ -1838,6 +2146,18 @@ r_nd|DEV-a1b2c3|a1b2c3d4e5|toggle|success|on</pre>
         <td>Device</td>
         <td class="param-type">pong|&lt;devId&gt;|&lt;cmd&gt;|&lt;data&gt;</td>
         <td class="param-desc">Queued server message, delivered on ping</td>
+      </tr>
+      <tr>
+        <td class="param-name">AdD_resp</td>
+        <td>Node / Hub</td>
+        <td class="param-type">AdD_resp|&lt;Local_ID&gt;|suc|&lt;cloud_user_id&gt;</td>
+        <td class="param-desc">Confirms successful self-registration via <code>addD</code> or <code>addH</code></td>
+      </tr>
+      <tr>
+        <td class="param-name">AdHN_resp</td>
+        <td>Hub</td>
+        <td class="param-type">AdHN_resp|&lt;hubID&gt;|suc|&lt;device_ID&gt;</td>
+        <td class="param-desc">Confirms a hub node was saved via an <code>AdHN</code> ping</td>
       </tr>
       <tr>
         <td class="param-name">error</td>
